@@ -105,7 +105,7 @@ async function sendOsNotificationWithImage(
         });
 
         await invoke("send_notification_with_image", {
-          title: "Posture Monitor",
+          title: "Posture Cam",
           body: message,
           imagePath: filePath,
         });
@@ -122,7 +122,7 @@ async function sendOsNotificationWithImage(
       permitted = result === "granted";
     }
     if (permitted) {
-      sendNotification({ title: "Posture Monitor", body: message });
+      sendNotification({ title: "Posture Cam", body: message });
     }
   } catch {
     // Silently ignore notification failures

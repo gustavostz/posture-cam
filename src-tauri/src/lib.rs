@@ -36,6 +36,7 @@ fn save_screenshot(app: tauri::AppHandle, base64_data: String) -> Result<String,
 /// Falls back to text-only if image fails.
 #[tauri::command]
 fn send_notification_with_image(
+    app: tauri::AppHandle,
     title: String,
     body: String,
     image_path: Option<String>,
@@ -43,7 +44,20 @@ fn send_notification_with_image(
     use notify_rust::Notification;
 
     let mut notif = Notification::new();
-    notif.summary(&title).body(&body).appname("Posture Monitor");
+    notif.summary(&title).body(&body).appname("Posture Cam");
+
+    // On Windows, set the AUMID so the notification shows "Posture Cam"
+    // instead of "Windows PowerShell". Uses the productName from tauri.conf.json
+    // which matches the AUMID registered by the NSIS installer.
+    #[cfg(target_os = "windows")]
+    {
+        let product_name = app.config().product_name.clone().unwrap_or_default();
+        if !product_name.is_empty() {
+            notif.app_id(&product_name);
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = &app;
 
     if let Some(path) = image_path {
         notif.image_path(&path);
@@ -155,7 +169,7 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
             TrayIconBuilder::new()
-                .tooltip("Posture Monitor")
+                .tooltip("Posture Cam")
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .on_menu_event(|app, event| {
