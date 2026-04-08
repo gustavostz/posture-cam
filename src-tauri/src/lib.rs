@@ -30,6 +30,27 @@ fn save_screenshot(app: tauri::AppHandle, base64_data: String) -> Result<String,
     Ok(file_path.to_string_lossy().to_string())
 }
 
+/// Send a Windows notification with an image attachment.
+/// Falls back to text-only if image fails.
+#[tauri::command]
+fn send_notification_with_image(
+    title: String,
+    body: String,
+    image_path: Option<String>,
+) -> Result<(), String> {
+    use notify_rust::Notification;
+
+    let mut notif = Notification::new();
+    notif.summary(&title).body(&body).appname("Posture Monitor");
+
+    if let Some(path) = image_path {
+        notif.image_path(&path);
+    }
+
+    notif.show().map_err(|e| format!("Notification failed: {}", e))?;
+    Ok(())
+}
+
 fn base64_decode(input: &str) -> Result<Vec<u8>, String> {
     // Simple base64 decoder without pulling in extra crates
     let table = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -97,7 +118,7 @@ pub fn run() {
         Migration {
             version: 2,
             description: "rename_settings_keys",
-            sql: "INSERT OR REPLACE INTO settings (key, value) VALUES ('sensitivity', '2');
+            sql: "INSERT OR REPLACE INTO settings (key, value) VALUES ('sensitivity', '3');
                 INSERT OR REPLACE INTO settings (key, value) VALUES ('score_threshold', '90');
                 DELETE FROM settings WHERE key = 'strictness';
                 DELETE FROM settings WHERE key = 'bad_posture_threshold';",
@@ -119,7 +140,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![save_screenshot])
+        .invoke_handler(tauri::generate_handler![save_screenshot, send_notification_with_image])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

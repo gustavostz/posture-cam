@@ -3051,6 +3051,7 @@ dependencies = [
 name = "posture-monitor"
 version = "0.1.0"
 dependencies = [
+ "notify-rust",
  "serde",
  "serde_json",
  "tauri",

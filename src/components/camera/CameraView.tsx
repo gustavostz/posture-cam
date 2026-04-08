@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { LandmarkOverlay } from "@/components/camera/LandmarkOverlay";
 import { usePoseDetection } from "@/hooks/usePoseDetection";
 import { usePostureScore } from "@/hooks/usePostureScore";
+import { drawPostureOverlay } from "@/lib/posture/visualization";
 import type { PostureAssessment, CalibrationProfile } from "@/lib/posture/types";
 
 const VIDEO_WIDTH = 640;
@@ -42,18 +43,6 @@ export function CameraView({
     }
   }, []);
 
-  // Register screenshot capture function for notifications
-  useEffect(() => {
-    if (!screenshotFnRef) return;
-    screenshotFnRef.current = () => {
-      if (!webcamRef.current) return null;
-      return webcamRef.current.getScreenshot() ?? null;
-    };
-    return () => {
-      screenshotFnRef.current = null;
-    };
-  }, [screenshotFnRef]);
-
   const { landmarks, isLoading, error } = usePoseDetection(
     videoRef,
     isMonitoring
@@ -88,6 +77,46 @@ export function CameraView({
 
   const score = assessment?.score ?? null;
   const shoulderTilt = assessment?.metrics.shoulderTiltRatio ?? null;
+
+  // Register screenshot capture that composites video + landmark overlay
+  const latestLandmarksRef = useRef(landmarks);
+  const latestScoreRef = useRef(score);
+  latestLandmarksRef.current = landmarks;
+  latestScoreRef.current = score;
+
+  useEffect(() => {
+    if (!screenshotFnRef) return;
+    screenshotFnRef.current = () => {
+      const video = videoRef.current;
+      if (!video) return webcamRef.current?.getScreenshot() ?? null;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = VIDEO_WIDTH;
+      canvas.height = VIDEO_HEIGHT;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+
+      ctx.save();
+      ctx.translate(VIDEO_WIDTH, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
+      ctx.restore();
+
+      if (latestLandmarksRef.current) {
+        drawPostureOverlay(
+          ctx,
+          latestLandmarksRef.current,
+          VIDEO_WIDTH,
+          VIDEO_HEIGHT,
+          latestScoreRef.current ?? undefined,
+          scoreThreshold
+        );
+      }
+
+      return canvas.toDataURL("image/jpeg", 0.85);
+    };
+    return () => { screenshotFnRef.current = null; };
+  }, [screenshotFnRef, scoreThreshold]);
   const headDrop = assessment?.metrics.headDropRatio ?? null;
 
   return (
