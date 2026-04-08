@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__context7__resolve-library-id",
+      "WebSearch",
+      "mcp__context7__query-docs",
+      "Bash(rustc --version)",
+      "Bash(cargo --version)",
+      "Bash(npm --version)",
+      "WebFetch(domain:learnopencv.com)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:ai.google.dev)"
+    ]
+  }
+}
