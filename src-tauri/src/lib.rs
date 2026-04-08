@@ -132,6 +132,12 @@ pub fn run() {
             sql: "INSERT OR IGNORE INTO settings (key, value) VALUES ('show_screenshot_in_alert', 'true');",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "update_default_score_threshold",
+            sql: "UPDATE settings SET value = '80' WHERE key = 'score_threshold' AND value = '90';",
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
