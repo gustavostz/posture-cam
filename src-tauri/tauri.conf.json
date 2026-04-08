@@ -36,9 +36,7 @@
   },
   "plugins": {
     "sql": {
-      "preload": {
-        "db": "sqlite:posture-monitor.db"
-      }
+      "preload": ["sqlite:posture-monitor.db"]
     }
   }
 }

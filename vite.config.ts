@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -28,5 +29,10 @@ export default defineConfig(async () => ({
     watch: {
       ignored: ["**/src-tauri/**"],
     },
+  },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: "./src/test/setup.ts",
   },
 }));
