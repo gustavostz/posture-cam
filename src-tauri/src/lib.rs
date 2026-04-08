@@ -1,4 +1,6 @@
 use tauri::Manager;
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::menu::{Menu, MenuItem};
 use tauri_plugin_sql::{Builder as SqlBuilder, Migration, MigrationKind};
 use std::fs;
 use std::path::PathBuf;
@@ -34,6 +36,7 @@ fn save_screenshot(app: tauri::AppHandle, base64_data: String) -> Result<String,
 /// Falls back to text-only if image fails.
 #[tauri::command]
 fn send_notification_with_image(
+    app: tauri::AppHandle,
     title: String,
     body: String,
     image_path: Option<String>,
@@ -41,7 +44,20 @@ fn send_notification_with_image(
     use notify_rust::Notification;
 
     let mut notif = Notification::new();
-    notif.summary(&title).body(&body).appname("Posture Monitor");
+    notif.summary(&title).body(&body).appname("Posture Cam");
+
+    // On Windows, set the AUMID so the notification shows "Posture Cam"
+    // instead of "Windows PowerShell". Uses the productName from tauri.conf.json
+    // which matches the AUMID registered by the NSIS installer.
+    #[cfg(target_os = "windows")]
+    {
+        let product_name = app.config().product_name.clone().unwrap_or_default();
+        if !product_name.is_empty() {
+            notif.app_id(&product_name);
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = &app;
 
     if let Some(path) = image_path {
         notif.image_path(&path);
@@ -130,6 +146,12 @@ pub fn run() {
             sql: "INSERT OR IGNORE INTO settings (key, value) VALUES ('show_screenshot_in_alert', 'true');",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "update_default_score_threshold",
+            sql: "UPDATE settings SET value = '80' WHERE key = 'score_threshold' AND value = '90';",
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -140,7 +162,71 @@ pub fn run() {
         )
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            // System tray: hide to tray on close, exit via tray menu
+            let show_i = MenuItem::with_id(app, "show", "Show Window", true, None::<&str>)?;
+            let quit_i = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+
+            TrayIconBuilder::new()
+                .tooltip("Posture Cam")
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .on_menu_event(|app, event| {
+                    match event.id().as_ref() {
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            // Hide window instead of closing — app stays in system tray
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
         .invoke_handler(tauri::generate_handler![save_screenshot, send_notification_with_image])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app_handle, event| {
+            // macOS: restore window when dock icon is clicked
+            match event {
+                #[cfg(target_os = "macos")]
+                tauri::RunEvent::Reopen { has_visible_windows, .. } => {
+                    if !has_visible_windows {
+                        if let Some(window) = _app_handle.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                }
+                _ => {}
+            }
+        });
 }
