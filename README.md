@@ -2,9 +2,16 @@
 
 A desktop app that monitors your posture in real time using your webcam. It detects body landmarks via MediaPipe, scores your posture from 0 to 100, and notifies you when you start slouching. All processing happens locally — no data leaves your machine.
 
+### Good posture
+
 <p align="center">
-  <img src="readme/bad-posture.png" alt="Bad posture detected" width="380" />
-  <img src="readme/good-posture.png" alt="Good posture detected" width="380" />
+  <img src="readme/good-posture.png" alt="Good posture detected" width="500" />
+</p>
+
+### Bad posture notification
+
+<p align="center">
+  <img src="readme/bad-posture-notification.png" alt="Bad posture notification" width="500" />
 </p>
 
 ## Features
