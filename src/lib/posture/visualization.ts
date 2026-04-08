@@ -36,13 +36,16 @@ export function drawPostureOverlay(
   canvasWidth: number,
   canvasHeight: number,
   score?: number,
-  scoreThreshold?: number
+  scoreThreshold?: number,
+  clearCanvas = true
 ): void {
   const effectiveScore = score ?? 75;
   const threshold = scoreThreshold ?? 90;
   const color = scoreToColor(effectiveScore, threshold);
 
-  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+  if (clearCanvas) {
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+  }
 
   ctx.save();
   ctx.translate(canvasWidth, 0);

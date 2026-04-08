@@ -27,12 +27,14 @@ export function useSession(
   const [badSeconds, setBadSeconds] = useState(0);
   const [avgScore, setAvgScore] = useState(0);
 
-  // Refs for tracking between renders
+  // Refs for tracking between renders (refs avoid stale closure issues)
   const lastTickRef = useRef<number>(0);
   const lastSnapshotRef = useRef<number>(0);
   const scoreAccumulatorRef = useRef(0);
   const scoreCountRef = useRef(0);
   const sessionIdRef = useRef<number | null>(null);
+  const goodSecondsRef = useRef(0);
+  const badSecondsRef = useRef(0);
 
   // Keep the ref in sync so callbacks can read the latest session id
   useEffect(() => {
@@ -58,6 +60,8 @@ export function useSession(
             lastSnapshotRef.current = now;
             scoreAccumulatorRef.current = 0;
             scoreCountRef.current = 0;
+            goodSecondsRef.current = 0;
+            badSecondsRef.current = 0;
           }
         } catch (err) {
           console.error("Failed to create session:", err);
@@ -78,7 +82,7 @@ export function useSession(
             ? Math.round(scoreAccumulatorRef.current / scoreCountRef.current)
             : 0;
 
-        void endSession(id, finalAvg, goodSeconds, badSeconds).catch(
+        void endSession(id, finalAvg, goodSecondsRef.current, badSecondsRef.current).catch(
           (err) => console.error("Failed to end session:", err)
         );
 
@@ -86,8 +90,6 @@ export function useSession(
         setSessionStartTime(null);
       }
     }
-    // Only react to isMonitoring changes. goodSeconds/badSeconds are intentionally
-    // read from state at the time monitoring stops.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMonitoring]);
 
@@ -101,9 +103,11 @@ export function useSession(
       lastTickRef.current = now;
 
       if (assess.status === "good") {
-        setGoodSeconds((prev) => prev + elapsed);
+        goodSecondsRef.current += elapsed;
+        setGoodSeconds(goodSecondsRef.current);
       } else {
-        setBadSeconds((prev) => prev + elapsed);
+        badSecondsRef.current += elapsed;
+        setBadSeconds(badSecondsRef.current);
       }
 
       // Running average score

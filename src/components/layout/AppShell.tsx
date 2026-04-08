@@ -199,7 +199,7 @@ export function AppShell() {
 
           <TabsContent value="statistics" className="h-full overflow-y-auto">
             <div className="space-y-4 p-4">
-              <ScoreChart data={chartData} />
+              <ScoreChart data={chartData} scoreThreshold={scoreThreshold} />
               <PostureSummary
                 totalSeconds={todayTotalSec}
                 avgScore={todayAvgScore}

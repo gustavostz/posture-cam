@@ -49,7 +49,8 @@ export class PostureAnalyzer {
     if (!metrics) return null;
 
     if (!this.calibration && !this.autoCalibrated) {
-      return this.handleAutoCalibration(metrics, keypoints, confidence);
+      this.collectAutoCalibration(metrics, keypoints);
+      return null; // Don't return fake scores during auto-calibration
     }
 
     if (!this.calibration) {
@@ -60,11 +61,10 @@ export class PostureAnalyzer {
     return this.buildAssessment(metrics, deviations, confidence);
   }
 
-  private handleAutoCalibration(
+  private collectAutoCalibration(
     metrics: PostureMetrics,
-    keypoints: PostureKeypoints,
-    confidence: number
-  ): PostureAssessment | null {
+    keypoints: PostureKeypoints
+  ): void {
     const now = Date.now();
     if (this.autoCalibrationStartTime === null) {
       this.autoCalibrationStartTime = now;
@@ -84,15 +84,6 @@ export class PostureAnalyzer {
       this.autoCalibrationKeypoints = [];
       this.smoother.reset();
     }
-
-    return {
-      metrics,
-      score: 100,
-      componentScores: { shoulderAlignment: 100, headPosition: 100, torsoAlignment: 100 },
-      status: "good",
-      confidence,
-      timestamp: Date.now(),
-    };
   }
 
   private buildAssessment(

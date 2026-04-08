@@ -109,7 +109,8 @@ export function CameraView({
           VIDEO_WIDTH,
           VIDEO_HEIGHT,
           latestScoreRef.current ?? undefined,
-          scoreThreshold
+          scoreThreshold,
+          false // don't clear - video frame is already drawn
         );
       }
 

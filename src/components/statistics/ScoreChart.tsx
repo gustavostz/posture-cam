@@ -9,14 +9,14 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// ScoreChart doesn't need DEFAULTS - threshold is passed via context
 import type { PostureScore } from "@/types";
 
 interface ScoreChartProps {
   data: PostureScore[];
+  scoreThreshold: number;
 }
 
-export function ScoreChart({ data }: ScoreChartProps) {
+export function ScoreChart({ data, scoreThreshold }: ScoreChartProps) {
   const chartData = data.map((d) => ({
     time: new Date(d.timestamp).toLocaleTimeString([], {
       hour: "2-digit",
@@ -72,7 +72,7 @@ export function ScoreChart({ data }: ScoreChartProps) {
                   }}
                 />
                 <ReferenceLine
-                  y={90}
+                  y={scoreThreshold}
                   stroke="hsl(0 84% 60%)"
                   strokeDasharray="6 4"
                   label={{
