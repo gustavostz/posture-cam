@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { PostureAssessment } from "@/lib/posture/types";
-import { createSession, endSession, insertSnapshot } from "@/lib/db";
+import { createSession, endSession, updateSessionProgress, insertSnapshot } from "@/lib/db";
 import { DEFAULTS } from "@/lib/constants";
 
 /**
@@ -92,6 +92,30 @@ export function useSession(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMonitoring]);
+
+  // Periodically flush session stats to DB so data survives app exit/crash
+  useEffect(() => {
+    if (!isMonitoring || sessionId === null) return;
+
+    const interval = setInterval(() => {
+      const id = sessionIdRef.current;
+      if (id === null) return;
+
+      const avg =
+        scoreCountRef.current > 0
+          ? Math.round(scoreAccumulatorRef.current / scoreCountRef.current)
+          : 0;
+
+      void updateSessionProgress(
+        id,
+        avg,
+        goodSecondsRef.current,
+        badSecondsRef.current
+      ).catch((err) => console.error("Failed to flush session:", err));
+    }, 10_000);
+
+    return () => clearInterval(interval);
+  }, [isMonitoring, sessionId]);
 
   // Track time and persist snapshots as assessments arrive
   const trackAssessment = useCallback(

@@ -25,6 +25,19 @@ export async function createSession(): Promise<number> {
   return result.lastInsertId as number;
 }
 
+export async function updateSessionProgress(
+  id: number,
+  avgScore: number,
+  goodSec: number,
+  badSec: number
+): Promise<void> {
+  const conn = await getDb();
+  await conn.execute(
+    "UPDATE sessions SET avg_score = $1, good_posture_seconds = $2, bad_posture_seconds = $3 WHERE id = $4",
+    [avgScore, Math.round(goodSec), Math.round(badSec), id]
+  );
+}
+
 export async function endSession(
   id: number,
   avgScore: number,
@@ -34,7 +47,7 @@ export async function endSession(
   const conn = await getDb();
   await conn.execute(
     "UPDATE sessions SET end_time = $1, avg_score = $2, good_posture_seconds = $3, bad_posture_seconds = $4 WHERE id = $5",
-    [new Date().toISOString(), avgScore, goodSec, badSec, id]
+    [new Date().toISOString(), avgScore, Math.round(goodSec), Math.round(badSec), id]
   );
 }
 
