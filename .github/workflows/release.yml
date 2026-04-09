@@ -38,6 +38,20 @@ jobs:
         if: matrix.platform == 'windows-2022'
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Configure Rust linker (Windows only)
+        if: matrix.platform == 'windows-2022'
+        shell: pwsh
+        run: |
+          $linkPath = & vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find "VC\Tools\MSVC\*\bin\Hostx64\x64\link.exe" | Select-Object -First 1
+          echo "Detected linker: $linkPath"
+          $escaped = $linkPath -replace '\\', '\\\\'
+          $target = [System.IO.Path]::Combine($env:USERPROFILE, '.cargo', 'config.toml')
+          @"
+          [target.x86_64-pc-windows-msvc]
+          linker = "$escaped"
+          "@ | Set-Content $target
+          Get-Content $target
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -62,8 +76,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CC: cl
-          CXX: cl
         with:
           tagName: v__VERSION__
           releaseName: 'Posture Cam v__VERSION__'
