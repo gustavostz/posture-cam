@@ -59,8 +59,7 @@ export function usePoseDetection(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const animationFrameRef = useRef<number>(0);
-  const lastDetectionTimeRef = useRef<number>(0);
+  const intervalRef = useRef<number>(0);
   const landmarkerRef = useRef<PoseLandmarker | null>(null);
 
   const ensureLandmarker = useCallback(async () => {
@@ -88,47 +87,45 @@ export function usePoseDetection(
     }
   }, []);
 
+  // Uses setInterval instead of requestAnimationFrame so detection continues
+  // when the window is hidden (minimized to system tray). rAF pauses when
+  // hidden, but setInterval keeps firing (~1Hz throttled), which is enough
+  // for notifications to trigger.
   const detect = useCallback(() => {
     const video = videoRef.current;
     const landmarker = landmarkerRef.current;
 
     if (!video || !landmarker || video.readyState < 2) {
-      animationFrameRef.current = requestAnimationFrame(detect);
       return;
     }
 
     const now = performance.now();
-    if (now - lastDetectionTimeRef.current >= FRAME_INTERVAL_MS) {
-      lastDetectionTimeRef.current = now;
 
-      try {
-        const result = landmarker.detectForVideo(video, now);
+    try {
+      const result = landmarker.detectForVideo(video, now);
 
-        if (result.landmarks.length > 0) {
-          setLandmarks(result.landmarks[0]);
-        } else {
-          setLandmarks(null);
-        }
-
-        if (result.worldLandmarks.length > 0) {
-          setWorldLandmarks(result.worldLandmarks[0]);
-        } else {
-          setWorldLandmarks(null);
-        }
-      } catch (err) {
-        console.warn("Pose detection frame error:", err);
+      if (result.landmarks.length > 0) {
+        setLandmarks(result.landmarks[0]);
+      } else {
+        setLandmarks(null);
       }
-    }
 
-    animationFrameRef.current = requestAnimationFrame(detect);
+      if (result.worldLandmarks.length > 0) {
+        setWorldLandmarks(result.worldLandmarks[0]);
+      } else {
+        setWorldLandmarks(null);
+      }
+    } catch (err) {
+      console.warn("Pose detection frame error:", err);
+    }
   }, [videoRef]);
 
   // Start/stop based on `enabled`
   useEffect(() => {
     if (!enabled) {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = 0;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = 0;
       }
       setLandmarks(null);
       setWorldLandmarks(null);
@@ -140,7 +137,7 @@ export function usePoseDetection(
     const start = async () => {
       await ensureLandmarker();
       if (!cancelled) {
-        animationFrameRef.current = requestAnimationFrame(detect);
+        intervalRef.current = window.setInterval(detect, FRAME_INTERVAL_MS);
       }
     };
 
@@ -148,18 +145,18 @@ export function usePoseDetection(
 
     return () => {
       cancelled = true;
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = 0;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = 0;
       }
     };
   }, [enabled, ensureLandmarker, detect]);
 
-  // Cleanup animation frame on unmount (don't close shared landmarker)
+  // Cleanup on unmount (don't close shared landmarker)
   useEffect(() => {
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
     };
   }, []);
