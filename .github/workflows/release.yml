@@ -44,13 +44,7 @@ jobs:
         run: |
           $linkPath = & vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find "VC\Tools\MSVC\*\bin\Hostx64\x64\link.exe" | Select-Object -First 1
           echo "Detected linker: $linkPath"
-          $escaped = $linkPath -replace '\\', '\\\\'
-          $target = [System.IO.Path]::Combine($env:USERPROFILE, '.cargo', 'config.toml')
-          @"
-          [target.x86_64-pc-windows-msvc]
-          linker = "$escaped"
-          "@ | Set-Content $target
-          Get-Content $target
+          echo "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linkPath" >> $env:GITHUB_ENV
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
