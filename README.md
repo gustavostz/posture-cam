@@ -1,6 +1,10 @@
-# Posture Monitor
+<p align="center">
+  <img src="readme/icon.png" alt="Posture Cam" width="128" />
+</p>
 
-A desktop app that monitors your posture in real time using your webcam. It detects body landmarks via MediaPipe, scores your posture from 0 to 100, and notifies you when you start slouching. All processing happens locally — no data leaves your machine.
+<h1 align="center">Posture Cam</h1>
+
+<p align="center">A desktop app that monitors your posture in real time using your webcam. It detects body landmarks via MediaPipe, scores your posture from 0 to 100, and notifies you when you start slouching. All processing happens locally — no data leaves your machine.</p>
 
 ### Bad posture notification
 
